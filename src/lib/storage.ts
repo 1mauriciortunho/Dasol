@@ -16,7 +16,8 @@ type UploadParams = {
   contentType?: string;
 };
 
-// Sube una imagen local (uri del picker) a un bucket de Supabase Storage.
+// Sube un archivo local (uri del picker: imagen o PDF) a un bucket de
+// Supabase Storage.
 // El cuerpo se arma distinto según la plataforma:
 //   - Nativo: no hay Blob/File, leemos el archivo en base64 y lo pasamos a
 //     ArrayBuffer (vía expo-file-system, que no existe en web).
@@ -35,7 +36,7 @@ export async function uploadImage({
       const res = await fetch(uri);
       body = await res.blob();
     } catch {
-      throw new Error('No pudimos leer la imagen.');
+      throw new Error('No pudimos leer el archivo.');
     }
   } else {
     let base64: string;
@@ -44,7 +45,7 @@ export async function uploadImage({
         encoding: FileSystem.EncodingType.Base64,
       });
     } catch {
-      throw new Error('No pudimos leer la imagen del dispositivo.');
+      throw new Error('No pudimos leer el archivo del dispositivo.');
     }
     body = decode(base64);
   }
@@ -54,7 +55,7 @@ export async function uploadImage({
     .from(bucket)
     .upload(path, body, { contentType, upsert: false });
 
-  if (error) throw new Error(`No pudimos subir la imagen: ${error.message}`);
+  if (error) throw new Error(`No pudimos subir el archivo: ${error.message}`);
   return data.path;
 }
 

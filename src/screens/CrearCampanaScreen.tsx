@@ -17,6 +17,7 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import * as DocumentPicker from 'expo-document-picker';
 import { RootStackParamList } from '../../App';
 import { useAuth } from '../lib/auth';
 import { uploadImage, getPublicUrl, shortId } from '../lib/storage';
@@ -28,6 +29,22 @@ type Nav = NativeStackNavigationProp<RootStackParamList, 'CrearCampana'>;
 const CATEGORY_KEYS: CategoryKey[] = [
   'salud', 'animales', 'desastre', 'educacion', 'funeral', 'alimentacion', 'otro',
 ];
+
+// Límite por documento de verificación. El bucket verification-docs tiene el
+// mismo tope del lado de Supabase (migración 011), así que esto es solo para
+// avisar temprano con un mensaje claro en vez de fallar al subir.
+const MAX_DOC_MB = 5;
+const MAX_DOC_BYTES = MAX_DOC_MB * 1024 * 1024;
+
+type DocFile = {
+  uri: string;
+  name: string;
+  mimeType: string;
+  size?: number;
+};
+
+const isPdf = (doc: DocFile) =>
+  doc.mimeType === 'application/pdf' || doc.name.toLowerCase().endsWith('.pdf');
 
 // Slug a partir del título: minúsculas, sin tildes, palabras con guión, más un
 // sufijo corto aleatorio para garantizar unicidad (la columna slug es unique).
@@ -57,7 +74,8 @@ export default function CrearCampanaScreen() {
   const [bankName, setBankName] = useState('');
   const [accountHolder, setAccountHolder] = useState('');
   const [dedicated, setDedicated] = useState(false);
-  const [documents, setDocuments] = useState<string[]>([]);
+  const [documents, setDocuments] = useState<DocFile[]>([]);
+  const [docError, setDocError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
@@ -86,18 +104,38 @@ export default function CrearCampanaScreen() {
   };
 
   const addDocuments = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      quality: 0.7,
-      allowsMultipleSelection: true,
+    const result = await DocumentPicker.getDocumentAsync({
+      type: ['image/*', 'application/pdf'],
+      multiple: true,
+      copyToCacheDirectory: true,
     });
-    if (!result.canceled) {
-      setDocuments((prev) => [...prev, ...result.assets.map((a) => a.uri)]);
+    if (result.canceled) return;
+
+    const accepted: DocFile[] = [];
+    const tooBig: string[] = [];
+    for (const a of result.assets) {
+      const doc: DocFile = {
+        uri: a.uri,
+        name: a.name || 'Documento',
+        mimeType: a.mimeType ?? '',
+        size: a.size ?? undefined,
+      };
+      if (doc.size != null && doc.size > MAX_DOC_BYTES) {
+        tooBig.push(doc.name);
+      } else {
+        accepted.push(doc);
+      }
     }
+    setDocuments((prev) => [...prev, ...accepted]);
+    setDocError(
+      tooBig.length > 0
+        ? `Estos archivos superan los ${MAX_DOC_MB} MB y no se adjuntaron: ${tooBig.join(', ')}.`
+        : null
+    );
   };
 
-  const removeDocument = (uri: string) =>
-    setDocuments((prev) => prev.filter((d) => d !== uri));
+  const removeDocument = (index: number) =>
+    setDocuments((prev) => prev.filter((_, i) => i !== index));
 
   const onSubmit = async () => {
     if (!isValid || !category || !coverUri || !qrUri || submitting) return;
@@ -156,11 +194,13 @@ export default function CrearCampanaScreen() {
 
       // 3) Subir cada documento de verificación al bucket privado y registrar
       //    la fila (path, no URL pública: son privados, sólo los ve el equipo).
-      for (const docUri of documents) {
+      for (const doc of documents) {
+        const pdf = isPdf(doc);
         const docPath = await uploadImage({
           bucket: 'verification-docs',
-          path: `${campaignId}/${shortId()}.jpg`,
-          uri: docUri,
+          path: `${campaignId}/${shortId()}.${pdf ? 'pdf' : 'jpg'}`,
+          uri: doc.uri,
+          contentType: pdf ? 'application/pdf' : doc.mimeType || 'image/jpeg',
         });
         const { error: docError } = await supabase
           .from('verification_documents')
@@ -377,15 +417,22 @@ export default function CrearCampanaScreen() {
           {/* Sección: verificación */}
           <Text style={styles.sectionTitle}>Verificación</Text>
           <Text style={styles.sectionHint}>
-            Adjuntá documentos que respalden el caso (informe médico, presupuesto, carnet, etc.).
-            Son privados: solo los ve el equipo de revisión, nunca el público.
+            Adjuntá fotos o PDFs que respalden el caso (informe médico, presupuesto, carnet,
+            etc.), de hasta {MAX_DOC_MB} MB cada uno. Son privados: solo los ve el equipo de
+            revisión, nunca el público.
           </Text>
 
-          {documents.map((uri, i) => (
-            <View key={uri} style={styles.docRow}>
-              <Image source={{ uri }} style={styles.docThumb} />
-              <Text style={styles.docName} numberOfLines={1}>Documento {i + 1}</Text>
-              <Pressable onPress={() => removeDocument(uri)} hitSlop={8} style={styles.docRemove}>
+          {documents.map((doc, i) => (
+            <View key={`${doc.uri}-${i}`} style={styles.docRow}>
+              {isPdf(doc) ? (
+                <View style={[styles.docThumb, styles.docThumbPdf]}>
+                  <Ionicons name="document-text" size={22} color={colors.primary} />
+                </View>
+              ) : (
+                <Image source={{ uri: doc.uri }} style={styles.docThumb} />
+              )}
+              <Text style={styles.docName} numberOfLines={1}>{doc.name}</Text>
+              <Pressable onPress={() => removeDocument(i)} hitSlop={8} style={styles.docRemove}>
                 <Ionicons name="close" size={18} color={colors.danger} />
               </Pressable>
             </View>
@@ -398,6 +445,8 @@ export default function CrearCampanaScreen() {
             <Ionicons name="document-attach-outline" size={20} color={colors.primary} />
             <Text style={styles.docAddText}>Adjuntar documento</Text>
           </Pressable>
+
+          {docError && <Text style={styles.docError}>{docError}</Text>}
 
           {!isValid && (
             <Text style={styles.missing}>
@@ -555,7 +604,20 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   docThumb: { width: 44, height: 44, borderRadius: radius.sm, backgroundColor: colors.track },
+  docThumbPdf: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   docName: { flex: 1, fontSize: 14, color: colors.text },
+  docError: {
+    marginTop: space.sm,
+    fontSize: 13,
+    color: colors.danger,
+    lineHeight: 19,
+  },
   docRemove: { padding: space.xs },
   docAdd: {
     flexDirection: 'row',
