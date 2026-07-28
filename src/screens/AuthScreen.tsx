@@ -43,7 +43,10 @@ function humanError(e: unknown): string {
 export default function AuthScreen() {
   const insets = useSafeAreaInsets();
   const nav = useNavigation<Nav>();
-  const redirect = useRoute<AuthRoute>().params?.redirect;
+  // El redirect es un objeto y no sobrevive a una recarga de página en
+  // /entrar (la URL lo degrada a string); en ese caso se ignora.
+  const rawRedirect = useRoute<AuthRoute>().params?.redirect;
+  const redirect = rawRedirect && typeof rawRedirect === 'object' ? rawRedirect : undefined;
   const { signIn, signUp } = useAuth();
 
   const [mode, setMode] = useState<'login' | 'register'>('login');
@@ -70,8 +73,10 @@ export default function AuthScreen() {
         redirect.screen,
         redirect.params
       );
-    } else {
+    } else if (nav.canGoBack()) {
       nav.goBack();
+    } else {
+      nav.replace('Feed');
     }
   };
 

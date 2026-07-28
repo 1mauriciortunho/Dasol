@@ -129,12 +129,33 @@ export async function fetchCampaignsByIds(ids: string[]): Promise<Campaign[]> {
   return (data ?? []).map(mapCampaign);
 }
 
+// Caché de handoff lista → detalle. Las tarjetas ya tienen la campaña
+// cargada; antes de navegar la dejan acá para que el detalle pinte al
+// instante mientras refresca por red. En un deep link frío no hay nada
+// primado y el detalle muestra su estado de carga.
+const primed = new Map<string, Campaign>();
+
+export function primeCampaign(campaign: Campaign): void {
+  primed.set(campaign.slug, campaign);
+}
+
+export function getPrimedCampaign(slug: string): Campaign | null {
+  return primed.get(slug) ?? null;
+}
+
 // Detalle: la campaña + sus mensajes de apoyo (más recientes primero) y su
-// galería de imágenes.
-export async function fetchCampaignById(id: string): Promise<Campaign> {
+// galería de imágenes. Acepta id o slug (el slug viene de la URL compartida).
+async function fetchCampaignDetail(
+  filter: { id: string } | { slug: string }
+): Promise<Campaign> {
   const supabase = getSupabase();
-  const [campaignRes, messagesRes, imagesRes] = await Promise.all([
-    supabase.from('campaigns').select(CAMPAIGN_COLUMNS).eq('id', id).single().returns<CampaignRow>(),
+  const base = supabase.from('campaigns').select(CAMPAIGN_COLUMNS);
+  const query = 'id' in filter ? base.eq('id', filter.id) : base.eq('slug', filter.slug);
+  const campaignRes = await query.single().returns<CampaignRow>();
+  if (campaignRes.error) throw new Error(campaignRes.error.message);
+  const id = campaignRes.data.id;
+
+  const [messagesRes, imagesRes] = await Promise.all([
     supabase
       .from('support_messages')
       .select('id, message, self_reported_amount, is_anonymous, author:profiles(full_name)')
@@ -149,7 +170,6 @@ export async function fetchCampaignById(id: string): Promise<Campaign> {
       .returns<CampaignImageRow[]>(),
   ]);
 
-  if (campaignRes.error) throw new Error(campaignRes.error.message);
   if (messagesRes.error) throw new Error(messagesRes.error.message);
   if (imagesRes.error) throw new Error(imagesRes.error.message);
 
@@ -158,6 +178,14 @@ export async function fetchCampaignById(id: string): Promise<Campaign> {
     supportMessages: (messagesRes.data ?? []).map(mapSupportMessage),
     images: (imagesRes.data ?? []).map(mapImage),
   };
+}
+
+export function fetchCampaignById(id: string): Promise<Campaign> {
+  return fetchCampaignDetail({ id });
+}
+
+export function fetchCampaignBySlug(slug: string): Promise<Campaign> {
+  return fetchCampaignDetail({ slug });
 }
 
 // ============================================================

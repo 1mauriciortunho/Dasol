@@ -14,7 +14,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { RootStackParamList } from '../../App';
 import { Campaign } from '../types';
-import { fetchCampaigns } from '../lib/campaigns';
+import { fetchCampaigns, primeCampaign } from '../lib/campaigns';
 import { subscribeToAllCampaigns } from '../lib/realtime';
 import { useAuth } from '../lib/auth';
 import { CampaignCard } from '../components/CampaignCard';
@@ -191,7 +191,10 @@ export default function FeedScreen() {
           renderItem={({ item }) => (
             <CampaignCard
               campaign={item}
-              onPress={() => nav.navigate('CampaignDetail', { campaign: item })}
+              onPress={() => {
+                primeCampaign(item);
+                nav.navigate('CampaignDetail', { slug: item.slug });
+              }}
             />
           )}
           contentContainerStyle={styles.list}

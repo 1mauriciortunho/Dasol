@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<!--
+  Plantilla del index.html que genera el export web de Expo.
+  Expo la toma de public/ en lugar de su plantilla por defecto, pone el
+  web.name de app.json como titulo y le inyecta los scripts del bundle.
+  (Ojo: el marcador de titulo solo puede aparecer UNA vez en este archivo;
+  Expo reemplaza la primera aparicion.)
+  Acá viven los metadatos que la app no puede poner en runtime: descripción
+  y Open Graph para que el link se vea bien al compartirse por WhatsApp.
+-->
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+    <title>%WEB_TITLE%</title>
+
+    <meta name="description" content="Campañas de ayuda de Santa Cruz de la Sierra en un solo lugar. Conocé cada caso, aportá directo con QR a la cuenta del organizador y seguí el avance." />
+    <meta name="theme-color" content="#1B5E4A" />
+
+    <!-- Open Graph: el preview que arma WhatsApp/Facebook al pegar el link -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Dasol" />
+    <meta property="og:title" content="Dasol — ayuda solidaria en Santa Cruz" />
+    <meta property="og:description" content="Campañas de ayuda de Santa Cruz en un solo lugar. Conocé cada caso, aportá directo con QR y seguí el avance." />
+    <meta property="og:url" content="https://dasol-khaki.vercel.app" />
+    <meta property="og:image" content="https://dasol-khaki.vercel.app/og.png" />
+    <meta property="og:image:width" content="1024" />
+    <meta property="og:image:height" content="1024" />
+    <meta property="og:locale" content="es_BO" />
+
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="Dasol — ayuda solidaria en Santa Cruz" />
+    <meta name="twitter:description" content="Campañas de ayuda de Santa Cruz en un solo lugar. Aportá directo con QR y seguí el avance." />
+    <meta name="twitter:image" content="https://dasol-khaki.vercel.app/og.png" />
+
+    <!-- The `react-native-web` recommended style reset: https://necolas.github.io/react-native-web/docs/setup/#root-element -->
+    <style id="expo-reset">
+      /* These styles make the body full-height */
+      html,
+      body {
+        height: 100%;
+      }
+      /* These styles disable body scrolling if you are using <ScrollView> */
+      body {
+        overflow: hidden;
+      }
+      /* These styles make the root element full-height */
+      #root {
+        display: flex;
+        height: 100%;
+        flex: 1;
+      }
+    </style>
+  </head>
+
+  <body>
+    <noscript>
+      Necesitás activar JavaScript para usar Dasol.
+    </noscript>
+    <!-- The root element for your Expo app. -->
+    <div id="root"></div>
+  </body>
+</html>

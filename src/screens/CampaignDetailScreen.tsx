@@ -20,7 +20,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { RootStackParamList } from '../../App';
 import { Campaign, ProgressUpdate, ReportReason, isCompleted } from '../types';
-import { fetchCampaignById, fetchProgressUpdates } from '../lib/campaigns';
+import { fetchCampaignBySlug, fetchProgressUpdates, getPrimedCampaign } from '../lib/campaigns';
 import { subscribeToCampaign } from '../lib/realtime';
 import { createReport, REPORT_REASONS } from '../lib/reports';
 import { isFollowing, followCampaign, unfollowCampaign } from '../lib/follows';
@@ -40,51 +40,60 @@ export default function CampaignDetailScreen() {
   const insets = useSafeAreaInsets();
   const nav = useNavigation<Nav>();
   const { session } = useAuth();
-  const { campaign: paramCampaign } = useRoute<DetailRoute>().params;
+  const { slug } = useRoute<DetailRoute>().params;
 
-  // La campaña base llega por params (portada, progreso, QR), así se pinta al
-  // instante. Los mensajes de apoyo e imágenes se traen frescos por id.
-  const [campaign, setCampaign] = useState<Campaign>(paramCampaign);
+  // Si venimos de una lista, la campaña ya está primada y se pinta al
+  // instante; en un deep link frío (URL compartida) arranca en null y se
+  // muestra el estado de carga hasta que llega de la red.
+  const [campaign, setCampaign] = useState<Campaign | null>(() => getPrimedCampaign(slug));
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [updates, setUpdates] = useState<ProgressUpdate[]>([]);
   const [refreshing, setRefreshing] = useState(false);
 
+  const campaignId = campaign?.id ?? null;
+
   const load = useCallback(async () => {
     setLoading(true);
     setError(false);
     try {
-      setCampaign(await fetchCampaignById(paramCampaign.id));
+      setCampaign(await fetchCampaignBySlug(slug));
     } catch (e) {
       console.warn('No se pudo cargar el detalle:', e);
       setError(true);
     } finally {
       setLoading(false);
     }
-  }, [paramCampaign.id]);
+  }, [slug]);
 
-  // Novedades para los donantes (solo las que tienen texto).
+  // Novedades para los donantes (solo las que tienen texto). Espera a conocer
+  // el id (en deep link frío llega recién con la campaña).
   const loadUpdates = useCallback(async () => {
+    if (!campaignId) return;
     try {
-      const data = await fetchProgressUpdates(paramCampaign.id);
+      const data = await fetchProgressUpdates(campaignId);
       setUpdates(data.filter((u) => !!u.updateText));
     } catch (e) {
       console.warn('No se pudieron cargar las novedades:', e);
     }
-  }, [paramCampaign.id]);
+  }, [campaignId]);
 
   useEffect(() => {
     load();
+  }, [load]);
+
+  useEffect(() => {
     loadUpdates();
-  }, [load, loadUpdates]);
+  }, [loadUpdates]);
 
   // Realtime: la barra se mueve sola cuando el trigger actualiza el monto.
   useEffect(() => {
-    const unsubscribe = subscribeToCampaign(paramCampaign.id, (change) => {
-      setCampaign((prev) => ({ ...prev, currentAmount: change.currentAmount }));
+    if (!campaignId) return;
+    const unsubscribe = subscribeToCampaign(campaignId, (change) => {
+      setCampaign((prev) => (prev ? { ...prev, currentAmount: change.currentAmount } : prev));
     });
     return unsubscribe;
-  }, [paramCampaign.id]);
+  }, [campaignId]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -97,12 +106,12 @@ export default function CampaignDetailScreen() {
 
   // Estado de seguimiento (solo con sesión).
   useEffect(() => {
-    if (!session) {
+    if (!session || !campaignId) {
       setFollowing(false);
       return;
     }
     let active = true;
-    isFollowing(paramCampaign.id)
+    isFollowing(campaignId)
       .then((f) => {
         if (active) setFollowing(f);
       })
@@ -110,12 +119,13 @@ export default function CampaignDetailScreen() {
     return () => {
       active = false;
     };
-  }, [session, paramCampaign.id]);
+  }, [session, campaignId]);
 
   // Seguir exige sesión. Alternancia optimista: revierte si falla.
   const onToggleFollow = async () => {
+    if (!campaign) return;
     if (!session) {
-      nav.navigate('Auth', { redirect: { screen: 'CampaignDetail', params: { campaign } } });
+      nav.navigate('Auth', { redirect: { screen: 'CampaignDetail', params: { slug } } });
       return;
     }
     if (followBusy) return;
@@ -134,9 +144,6 @@ export default function CampaignDetailScreen() {
     }
   };
 
-  const cat = categories[campaign.category];
-  const completed = isCompleted(campaign);
-
   const [following, setFollowing] = useState(false);
   const [followBusy, setFollowBusy] = useState(false);
 
@@ -146,6 +153,27 @@ export default function CampaignDetailScreen() {
   const [reportSubmitting, setReportSubmitting] = useState(false);
   const [reportError, setReportError] = useState<string | null>(null);
   const [reportDone, setReportDone] = useState(false);
+
+  // Deep link frío: todavía no hay campaña que mostrar. (Va después de todos
+  // los hooks para no romper su orden entre renders.)
+  if (!campaign) {
+    return (
+      <View style={[styles.screen, { paddingTop: insets.top }]}>
+        {error && !loading ? (
+          <ErrorState
+            onRetry={load}
+            title="No encontramos esta campaña"
+            message="El enlace puede estar mal copiado, o la campaña ya no está disponible."
+          />
+        ) : (
+          <LoadingState text="Cargando campaña…" />
+        )}
+      </View>
+    );
+  }
+
+  const cat = categories[campaign.category];
+  const completed = isCompleted(campaign);
 
   // Avisar un pago exige sesión: sin ella, vamos a Auth y al loguearse se
   // redirige a AvisarPago conservando los params de la campaña.
@@ -175,7 +203,7 @@ export default function CampaignDetailScreen() {
   // mismo detalle.
   const onReport = () => {
     if (!session) {
-      nav.navigate('Auth', { redirect: { screen: 'CampaignDetail', params: { campaign } } });
+      nav.navigate('Auth', { redirect: { screen: 'CampaignDetail', params: { slug } } });
       return;
     }
     setReportReason(null);
@@ -223,7 +251,7 @@ export default function CampaignDetailScreen() {
         <View>
           <Image source={{ uri: campaign.coverImageUrl }} style={styles.cover} />
           <Pressable
-            onPress={() => nav.goBack()}
+            onPress={() => (nav.canGoBack() ? nav.goBack() : nav.replace('Feed'))}
             style={[styles.back, { top: insets.top + space.sm }]}
           >
             <Ionicons name="arrow-back" size={22} color={colors.text} />

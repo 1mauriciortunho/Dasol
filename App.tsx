@@ -1,13 +1,19 @@
 import React, { useEffect, useState } from 'react';
 import { View, ActivityIndicator, Platform } from 'react-native';
-import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
+import {
+  NavigationContainer,
+  createNavigationContainerRef,
+  getStateFromPath as defaultGetStateFromPath,
+  LinkingOptions,
+} from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import * as Notifications from 'expo-notifications';
 import { AuthProvider } from './src/lib/auth';
 import { hasSeenOnboarding } from './src/lib/onboarding';
-import { fetchCampaignById } from './src/lib/campaigns';
+import { fetchCampaignById, primeCampaign } from './src/lib/campaigns';
+import { SITE_URL } from './src/lib/config';
 import FeedScreen from './src/screens/FeedScreen';
 import CampaignDetailScreen from './src/screens/CampaignDetailScreen';
 import AvisarPagoScreen from './src/screens/AvisarPagoScreen';
@@ -21,13 +27,12 @@ import ReportsScreen from './src/screens/ReportsScreen';
 import SiguiendoScreen from './src/screens/SiguiendoScreen';
 import PerfilScreen from './src/screens/PerfilScreen';
 import OnboardingScreen from './src/screens/OnboardingScreen';
-import { Campaign } from './src/mockData';
 import { PendingCampaign } from './src/types';
 import { colors } from './src/theme';
 
 export type RootStackParamList = {
   Feed: undefined;
-  CampaignDetail: { campaign: Campaign };
+  CampaignDetail: { slug: string };
   AvisarPago: { campaignId: string; campaignTitle: string };
   CrearCampana: undefined;
   Auth: { redirect?: { screen: keyof RootStackParamList; params?: object } } | undefined;
@@ -54,7 +59,8 @@ async function openFromNotification(response: Notifications.NotificationResponse
   if (!campaignId || typeof campaignId !== 'string') return;
   try {
     const campaign = await fetchCampaignById(campaignId);
-    if (navigationRef.isReady()) navigationRef.navigate('CampaignDetail', { campaign });
+    primeCampaign(campaign);
+    if (navigationRef.isReady()) navigationRef.navigate('CampaignDetail', { slug: campaign.slug });
   } catch (e) {
     console.warn('No se pudo abrir la campaña de la notificación:', e);
   }
@@ -90,11 +96,45 @@ export default function App() {
     );
   }
 
+  // Deep links: `/c/:slug` abre el detalle de una campaña — es la URL que
+  // genera el botón compartir y la que circula por WhatsApp. En web, además,
+  // mantiene la URL del navegador sincronizada con la pantalla.
+  const linking: LinkingOptions<RootStackParamList> = {
+    prefixes: [SITE_URL, 'dasol://'],
+    config: {
+      screens: {
+        Feed: '',
+        CampaignDetail: 'c/:slug',
+        CrearCampana: 'crear',
+        Auth: 'entrar',
+        Perfil: 'perfil',
+        Siguiendo: 'siguiendo',
+        MisCampanas: 'mis-campanas',
+        CampanaManage: 'mis-campanas/gestion',
+        AvisarPago: 'avisar-pago',
+        Moderation: 'moderacion',
+        ModerationDetail: 'moderacion/detalle',
+        Reports: 'moderacion/denuncias',
+        Onboarding: 'bienvenida',
+      },
+    },
+    // La raíz respeta la decisión ya resuelta de onboarding (primera visita →
+    // carrusel); cualquier otro path se resuelve con el parser por defecto.
+    getStateFromPath: (path, options) => {
+      const clean = path.replace(/\?.*$/, '').replace(/^\/+|\/+$/g, '');
+      if (clean === '') return { routes: [{ name: initialRoute }] };
+      // El detalle de moderación recibe un objeto por params que no sobrevive
+      // a la URL: al recargar la página ahí, volvemos a la lista.
+      if (clean === 'moderacion/detalle') return { routes: [{ name: 'Moderation' }] };
+      return defaultGetStateFromPath(path, options);
+    },
+  };
+
   return (
     <SafeAreaProvider>
       <StatusBar style="dark" />
       <AuthProvider>
-        <NavigationContainer ref={navigationRef}>
+        <NavigationContainer ref={navigationRef} linking={linking}>
           <Stack.Navigator initialRouteName={initialRoute} screenOptions={{ headerShown: false }}>
             <Stack.Screen name="Onboarding" component={OnboardingScreen} />
             <Stack.Screen name="Feed" component={FeedScreen} />

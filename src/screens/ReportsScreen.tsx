@@ -14,7 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { RootStackParamList } from '../../App';
 import { OpenReport } from '../types';
 import { fetchOpenReports, setReportStatus, reasonLabel } from '../lib/reports';
-import { fetchCampaignById } from '../lib/campaigns';
+import { fetchCampaignById, primeCampaign } from '../lib/campaigns';
 import { useAuth } from '../lib/auth';
 import { LoadingState } from '../components/LoadingState';
 import { ErrorState } from '../components/ErrorState';
@@ -74,7 +74,8 @@ export default function ReportsScreen() {
     setActionError(null);
     try {
       const campaign = await fetchCampaignById(campaignId);
-      nav.navigate('CampaignDetail', { campaign });
+      primeCampaign(campaign);
+      nav.navigate('CampaignDetail', { slug: campaign.slug });
     } catch (e) {
       console.warn('No se pudo abrir la campaña:', e);
       setActionError('No pudimos abrir la campaña. Intentá de nuevo.');

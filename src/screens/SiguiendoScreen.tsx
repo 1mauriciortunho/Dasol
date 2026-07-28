@@ -14,6 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { RootStackParamList } from '../../App';
 import { Campaign } from '../types';
 import { fetchFollowedCampaigns } from '../lib/follows';
+import { primeCampaign } from '../lib/campaigns';
 import { CampaignCard } from '../components/CampaignCard';
 import { LoadingState } from '../components/LoadingState';
 import { ErrorState } from '../components/ErrorState';
@@ -90,7 +91,10 @@ export default function SiguiendoScreen() {
           renderItem={({ item }) => (
             <CampaignCard
               campaign={item}
-              onPress={() => nav.navigate('CampaignDetail', { campaign: item })}
+              onPress={() => {
+                primeCampaign(item);
+                nav.navigate('CampaignDetail', { slug: item.slug });
+              }}
             />
           )}
           ListEmptyComponent={
