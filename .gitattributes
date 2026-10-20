@@ -1,0 +1,2 @@
+# Los parches de patch-package deben conservar saltos de línea LF para aplicarse bien.
+*.patch text eol=lf
