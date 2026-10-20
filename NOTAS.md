@@ -26,12 +26,14 @@ como *composite build* (`includeBuild`). Esa versión referencia la constante
 + plugins { id("org.gradle.toolchains.foojay-resolver-convention").version("1.0.0") }
 ```
 
-**Cuándo se pierde:** este archivo vive en `node_modules/`, así que lo borra
-**cualquier `npm install`** (no hace falta un prebuild). Cada vez que se
-reinstalen dependencias hay que volver a aplicar este cambio.
+**Automatizado con `patch-package`:** el cambio vive en
+`patches/@react-native+gradle-plugin+0.85.3.patch` y el script
+`"postinstall": "patch-package"` lo reaplica solo después de cada
+`npm install`. No hace falta tocar `node_modules/` a mano.
 
-**Cómo automatizarlo (pendiente de confirmar, NO implementado):** lo más
-robusto es `patch-package`: instalarlo, dejar el cambio hecho, correr
-`npx patch-package @react-native/gradle-plugin` para generar el `.patch`, y
-agregar un script `"postinstall": "patch-package"` para que se reaplique solo
-tras cada `npm install`. No está hecho todavía: confirmar antes de implementarlo.
+**Si se actualiza React Native:** el nombre del `.patch` lleva la versión del
+gradle-plugin. Al subir de versión, comprobar si la nueva ya trae foojay
+`>= 1.0.0`; si sí, borrar el `.patch`; si no, rehacer el cambio en
+`node_modules/` y regenerarlo con `npx patch-package @react-native/gradle-plugin`
+(revisar que el `.patch` solo contenga `settings.gradle.kts` y no archivos de
+`.gradle/` o `build/`).

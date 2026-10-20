@@ -24,6 +24,7 @@ import {
   fetchPaymentNotifications,
   setPaymentNotificationStatus,
   createSignedUrl,
+  setDedicatedAccountVerified,
 } from '../lib/campaigns';
 import { useAuth } from '../lib/auth';
 import { colors, radius, space, type, categories, formatBs } from '../theme';
@@ -53,6 +54,8 @@ export default function ModerationDetailScreen() {
   const [actionError, setActionError] = useState<string | null>(null);
   const [rejectMode, setRejectMode] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
+  const [accountVerified, setAccountVerified] = useState(campaign.dedicatedAccountVerified);
+  const [verifyingAccount, setVerifyingAccount] = useState(false);
 
   const [notifs, setNotifs] = useState<PaymentNotification[]>([]);
   const [notifsLoading, setNotifsLoading] = useState(true);
@@ -103,6 +106,21 @@ export default function ModerationDetailScreen() {
       console.warn('No se pudo rechazar la campaña:', e);
       setActionError('No pudimos rechazar la campaña. Intentá de nuevo.');
       setWorking(false);
+    }
+  };
+
+  const toggleAccountVerified = async () => {
+    if (verifyingAccount) return;
+    setVerifyingAccount(true);
+    setActionError(null);
+    try {
+      await setDedicatedAccountVerified(campaign.id, !accountVerified);
+      setAccountVerified(!accountVerified);
+    } catch (e) {
+      console.warn('No se pudo actualizar la verificación de la cuenta:', e);
+      setActionError('No pudimos actualizar la verificación de la cuenta. Intentá de nuevo.');
+    } finally {
+      setVerifyingAccount(false);
     }
   };
 
@@ -206,6 +224,32 @@ export default function ModerationDetailScreen() {
                 ? 'Declara cuenta exclusiva para la campaña'
                 : 'No declara cuenta exclusiva'}
             </Text>
+            {campaign.usesDedicatedAccount && isModerator && (
+              <Pressable
+                onPress={toggleAccountVerified}
+                disabled={verifyingAccount}
+                style={({ pressed }) => [
+                  accountVerified ? styles.verifyUndo : styles.verifyBtn,
+                  verifyingAccount && styles.btnDisabled,
+                  pressed && { opacity: 0.9 },
+                ]}
+              >
+                {verifyingAccount ? (
+                  <ActivityIndicator color={accountVerified ? colors.primary : colors.white} />
+                ) : (
+                  <>
+                    <Ionicons
+                      name={accountVerified ? 'shield-checkmark' : 'shield-checkmark-outline'}
+                      size={16}
+                      color={accountVerified ? colors.primary : colors.white}
+                    />
+                    <Text style={accountVerified ? styles.verifyUndoText : styles.verifyBtnText}>
+                      {accountVerified ? 'Cuenta verificada · quitar' : 'Marcar cuenta como verificada'}
+                    </Text>
+                  </>
+                )}
+              </Pressable>
+            )}
           </View>
 
           {/* Documentos de verificación (signed URL al tocar) */}
@@ -407,6 +451,33 @@ const styles = StyleSheet.create({
   infoLabel: { fontSize: 12, fontWeight: '600', color: colors.textMuted, textTransform: 'uppercase', letterSpacing: 0.5 },
   infoValue: { fontSize: 15, fontWeight: '600', color: colors.text, marginTop: 2 },
   infoMuted: { fontSize: 13, color: colors.textMuted, marginTop: 2 },
+  verifyBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: space.xs,
+    alignSelf: 'flex-start',
+    marginTop: space.md,
+    backgroundColor: colors.primary,
+    paddingVertical: space.sm,
+    paddingHorizontal: space.lg,
+    borderRadius: radius.md,
+  },
+  verifyBtnText: { color: colors.white, fontSize: 14, fontWeight: '600' },
+  verifyUndo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: space.xs,
+    alignSelf: 'flex-start',
+    marginTop: space.md,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    paddingVertical: space.sm,
+    paddingHorizontal: space.lg,
+    borderRadius: radius.md,
+  },
+  verifyUndoText: { color: colors.primary, fontSize: 14, fontWeight: '600' },
   phone: { fontSize: 15, fontWeight: '600', color: colors.primary, marginTop: 2 },
   story: { marginTop: space.lg, fontSize: 15, lineHeight: 23, color: colors.text },
   sectionTitle: { ...type.h2, marginTop: space.xxl, marginBottom: space.sm },

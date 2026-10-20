@@ -269,6 +269,21 @@ export async function rejectCampaign(id: string, reason: string): Promise<void> 
   if (error) throw new Error(error.message);
 }
 
+// Badge "cuenta verificada": el moderador confirma que la cuenta declarada
+// es exclusiva de la campaña. Sólo un moderador puede cambiarlo (trigger 012).
+export async function setDedicatedAccountVerified(id: string, verified: boolean): Promise<void> {
+  const supabase = getSupabase();
+  const { error } = await supabase
+    .from('campaigns')
+    .update({
+      dedicated_account_verified: verified,
+      account_verified_by: verified ? await currentUserId() : null,
+      account_verified_at: verified ? new Date().toISOString() : null,
+    })
+    .eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
 type PaymentNotificationRow = {
   id: string;
   sender_name: string | null;

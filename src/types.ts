@@ -1,6 +1,6 @@
 // Tipos de dominio canónicos de la app. Reflejan el esquema de la base
 // (schema.sql) pero en camelCase. La base usa snake_case; el mapeo vive en
-// src/lib/campaigns.ts. mockData.ts importa estos tipos para no duplicarlos.
+// src/lib/campaigns.ts.
 import { CategoryKey } from './theme';
 
 export type Profile = {

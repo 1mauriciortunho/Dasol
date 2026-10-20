@@ -22,7 +22,8 @@ Público: personas de Santa Cruz que quieren ayudar y organizadores que levantan
 - **Navegación:** `@react-navigation/native` + `@react-navigation/native-stack`.
 - **Iconos:** `@expo/vector-icons` (Ionicons), ya incluido en Expo.
 - **Backend (objetivo):** Supabase — Postgres, Auth, Storage (fotos/QR), RLS y Realtime para la barra en vivo.
-- **Estado actual de datos:** mock en `src/mockData.ts`. Supabase todavía NO está conectado.
+- **Datos:** Supabase conectado (`src/lib/supabase.ts`). Auth, Storage (buckets `campaign-images` público; `verification-docs` y `payment-receipts` privados, leídos con URLs firmadas), Realtime para la barra y push a seguidores vía Edge Function `notify-followers`.
+- **Web:** deploy en Vercel; links compartibles `/c/:slug` con metadatos para WhatsApp (`public/index.html`).
 
 ## Modelo de datos
 
@@ -41,6 +42,9 @@ Invariantes a respetar siempre:
 - Cambios de monto solo por inserción en `progress_updates`.
 - Confirmar un `payment_notification` cambia su `status`, nunca suma al total automáticamente.
 - Toda tabla con RLS habilitado; al agregar tablas, definir políticas en el mismo estilo que las existentes.
+- Las políticas de UPDATE filtran filas, no columnas. Las columnas sensibles las protegen triggers (`guard_campaign_columns`, `guard_profile_role`, `guard_payment_notification`; migraciones 012 y 013): `current_amount` solo cambia desde el trigger de `progress_updates`; estado, revisión y badge de cuenta verificada solo los cambia un moderador; `role` solo lo cambia un admin; de un aviso de pago solo se cambia el `status`. Si agregás columnas sensibles, sumalas ahí.
+- Campos críticos de una campaña (QR, banco, titular, cuenta exclusiva, meta, beneficiario): si el organizador los cambia en una campaña aprobada, vuelve sola a `en_revision`; cambiar la cuenta quita el badge. Título, historia, portada, contacto y fecha límite se editan libres. Una futura pantalla de edición tiene que avisarlo antes de guardar.
+- Autoría: avisos de pago, denuncias y mensajes de apoyo solo se crean a nombre del usuario logueado (`sender_id`/`reporter_id`/`author_id = auth.uid()`). El anonimato público es `is_anonymous`/`sender_name`.
 
 ## SQL: historial de migraciones (no negociable)
 
@@ -64,19 +68,23 @@ Todo sale de `src/theme.ts`. No hardcodees colores ni tamaños en componentes.
 ## Estructura del proyecto
 
 ```
-App.tsx                              # entrada + navegación (stack)
+App.tsx                              # entrada + navegación (stack) + deep linking
+schema.sql                           # esquema completo vigente
+db/migrations/                       # historial de SQL aplicado (ver arriba)
+supabase/functions/notify-followers/ # Edge Function de push a seguidores
+patches/                             # parches de node_modules (patch-package, ver NOTAS.md)
 src/
   theme.ts                           # tokens de diseño + categorías + formatBs
-  mockData.ts                        # campañas de ejemplo (reemplazar por Supabase)
-  components/
-    ProgressBar.tsx                  # barra de progreso (prop `large` para detalle)
-    CampaignCard.tsx                 # tarjeta del feed
-  screens/
-    FeedScreen.tsx                   # lista + filtros por categoría
-    CampaignDetailScreen.tsx         # historia, progreso, QR, mensajes
+  types.ts                           # tipos de dominio (camelCase)
+  lib/                               # supabase, auth, campaigns (lecturas/escrituras y mapeo),
+                                     # storage, realtime, follows, reports, notifications
+  components/                        # ProgressBar, CampaignCard, estados vacío/error/carga
+  screens/                           # Feed, CampaignDetail, AvisarPago, CrearCampana, Auth,
+                                     # Onboarding, Perfil, MisCampanas, CampanaManage,
+                                     # Moderation, ModerationDetail, Reports, Siguiendo
 ```
 
-Convención: pantallas en `src/screens`, piezas reutilizables en `src/components`, tipos de dominio en `src/mockData.ts` (migrarán a `src/types.ts` o a tipos generados de Supabase cuando conectemos).
+Convención: pantallas en `src/screens`, piezas reutilizables en `src/components`, acceso a datos en `src/lib`, tipos de dominio en `src/types.ts`. El mapeo snake_case → camelCase vive en `src/lib/campaigns.ts`.
 
 ## Convenciones de código
 
@@ -88,21 +96,20 @@ Convención: pantallas en `src/screens`, piezas reutilizables en `src/components
 
 ## Estado actual
 
-- ✅ Esquema de base de datos (`schema.sql`).
-- ✅ Feed con filtros y tarjetas.
-- ✅ Detalle de campaña con QR, progreso y mensajes de apoyo.
-- ✅ Sistema de diseño en `theme.ts`.
-- ⏳ Botón "avisar pago": hoy es un stub (muestra un `Alert`).
-- ❌ Pantalla de crear campaña.
-- ❌ Conexión a Supabase (todo corre con mock).
-- ❌ Auth, panel de moderación.
+- ✅ Esquema, RLS, triggers y migraciones `001`–`013`.
+- ✅ Supabase conectado: feed y detalle con datos reales, Storage, Realtime en la barra.
+- ✅ Auth (login/registro), onboarding y perfil.
+- ✅ Avisar pago (foto de comprobante → `payment_notifications`, no suma al total).
+- ✅ Crear campaña con documentos de verificación (imagen o PDF ≤ 5 MB); nace `en_revision`.
+- ✅ Mis campañas y reporte de avance (`progress_updates`).
+- ✅ Moderación: aprobar/rechazar, revisar avisos de pago, marcar cuenta exclusiva como verificada, denuncias.
+- ✅ Seguir campañas + notificaciones push.
+- ✅ Deploy web en Vercel con links compartibles `/c/:slug`.
 
-## Próximos pasos (orden tentativo)
+## Próximos pasos (ideas, sin orden fijo)
 
-1. Pantalla de **avisar pago** (subir foto de comprobante + monto → `payment_notifications`).
-2. Pantalla de **crear campaña** (con subida de documentos de verificación; nace en `en_revision`).
-3. **Conectar Supabase**: cliente, auth, lecturas del feed/detalle, Storage para imágenes, y luego Realtime para la barra.
-4. Panel/flujo de **moderación**.
+1. Pantalla de editar campaña para el organizador (respetando la regla de campos críticos).
+2. Build de Android/iOS para tiendas.
 
 ## Qué NO hacer
 
