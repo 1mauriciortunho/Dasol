@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   View,
   Text,
@@ -12,7 +12,7 @@ import {
   StyleSheet,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
+import { useNavigation, useRoute, RouteProp, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
@@ -80,10 +80,13 @@ export default function CampanaManageScreen() {
     }
   }, [campaignId]);
 
-  useEffect(() => {
-    load();
-    loadUpdates();
-  }, [load, loadUpdates]);
+  // Al volver de editar la campaña (título, estado, etc.) se recarga.
+  useFocusEffect(
+    useCallback(() => {
+      load();
+      loadUpdates();
+    }, [load, loadUpdates])
+  );
 
   const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.7 });
@@ -147,7 +150,7 @@ export default function CampanaManageScreen() {
     </View>
   );
 
-  if (loading) {
+  if (loading && !campaign) {
     return (
       <View style={styles.screen}>
         {header}
@@ -208,6 +211,18 @@ export default function CampanaManageScreen() {
             <Text style={[styles.badgeText, { color: st.color }]}>{st.label}</Text>
           </View>
           <Text style={styles.title}>{campaign.title}</Text>
+          {campaign.status === 'rechazada' && campaign.rejectionReason && (
+            <Text style={styles.rejection}>Motivo: {campaign.rejectionReason}</Text>
+          )}
+          <Pressable
+            onPress={() => nav.navigate('EditarCampana', { campaignId })}
+            style={({ pressed }) => [styles.editBtn, pressed && { opacity: 0.9 }]}
+          >
+            <Ionicons name="create-outline" size={16} color={colors.primary} />
+            <Text style={styles.editBtnText}>
+              {campaign.status === 'rechazada' ? 'Corregir y reenviar' : 'Editar campaña'}
+            </Text>
+          </Pressable>
 
           <View style={styles.progressBlock}>
             <ProgressBar current={campaign.currentAmount} goal={campaign.goalAmount} large />
@@ -361,6 +376,20 @@ const styles = StyleSheet.create({
   },
   badgeText: { fontSize: 12, fontWeight: '600' },
   title: { ...type.h1, lineHeight: 29, marginTop: space.sm },
+  rejection: { marginTop: space.xs, fontSize: 14, color: colors.danger, lineHeight: 20 },
+  editBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.xs,
+    alignSelf: 'flex-start',
+    marginTop: space.md,
+    paddingVertical: space.sm,
+    paddingHorizontal: space.lg,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.primary,
+  },
+  editBtnText: { fontSize: 14, fontWeight: '600', color: colors.primary },
   progressBlock: {
     marginTop: space.lg,
     padding: space.lg,

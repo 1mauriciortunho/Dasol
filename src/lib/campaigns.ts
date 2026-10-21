@@ -381,6 +381,75 @@ export async function fetchMyCampaigns(): Promise<MyCampaign[]> {
   }));
 }
 
+// Campos que el organizador puede editar. Las imágenes nuevas llegan como uri
+// local y se suben acá; si no cambian, van null.
+export type CampaignEdit = {
+  title: string;
+  story: string;
+  category: CategoryKey;
+  beneficiaryName: string;
+  goalAmount: number;
+  qrBankName: string;
+  accountHolderName: string;
+  usesDedicatedAccount: boolean;
+  newCoverUri: string | null;
+  newQrUri: string | null;
+};
+
+// Campos críticos: si cambian en una campaña aprobada/completada, el trigger
+// (migración 013) la devuelve a en_revision. Esta función replica la regla
+// sólo para AVISAR antes de guardar; la que decide es la base.
+export function changesCriticalFields(c: Campaign, e: CampaignEdit): boolean {
+  return (
+    changesAccount(c, e) ||
+    e.goalAmount !== c.goalAmount ||
+    e.beneficiaryName.trim() !== c.beneficiaryName
+  );
+}
+
+export function changesAccount(c: Campaign, e: CampaignEdit): boolean {
+  return (
+    e.newQrUri != null ||
+    e.qrBankName.trim() !== c.qrBankName ||
+    e.accountHolderName.trim() !== c.accountHolderName ||
+    e.usesDedicatedAccount !== c.usesDedicatedAccount
+  );
+}
+
+// Guarda la edición. Una campaña en borrador o rechazada se reenvía a revisión
+// (única transición de estado que puede hacer el organizador, migración 014).
+export async function updateMyCampaign(campaign: MyCampaign, edit: CampaignEdit): Promise<void> {
+  const supabase = getSupabase();
+
+  const upload = async (uri: string, kind: 'cover' | 'qr') => {
+    const path = await uploadImage({
+      bucket: 'campaign-images',
+      path: `${campaign.slug}/${kind}-${shortId()}.jpg`,
+      uri,
+    });
+    return getPublicUrl('campaign-images', path);
+  };
+
+  const patch: Record<string, unknown> = {
+    title: edit.title.trim(),
+    story: edit.story.trim(),
+    category: edit.category,
+    beneficiary_name: edit.beneficiaryName.trim() || null,
+    goal_amount: edit.goalAmount,
+    qr_bank_name: edit.qrBankName.trim() || null,
+    account_holder_name: edit.accountHolderName.trim() || null,
+    uses_dedicated_account: edit.usesDedicatedAccount,
+  };
+  if (edit.newCoverUri) patch.cover_image_url = await upload(edit.newCoverUri, 'cover');
+  if (edit.newQrUri) patch.qr_image_url = await upload(edit.newQrUri, 'qr');
+  if (campaign.status === 'borrador' || campaign.status === 'rechazada') {
+    patch.status = 'en_revision';
+  }
+
+  const { error } = await supabase.from('campaigns').update(patch).eq('id', campaign.id);
+  if (error) throw new Error(error.message);
+}
+
 type ProgressUpdateRow = {
   id: string;
   new_total: number | string | null;

@@ -333,7 +333,10 @@ begin
     return new;
   end if;
 
-  if new.status                     is distinct from old.status
+  -- Única transición de estado que puede hacer el organizador: reenviar a
+  -- revisión una campaña en borrador o rechazada (después de corregirla).
+  if (new.status is distinct from old.status
+      and not (old.status in ('borrador', 'rechazada') and new.status = 'en_revision'))
   or new.rejection_reason           is distinct from old.rejection_reason
   or new.reviewed_by                is distinct from old.reviewed_by
   or new.reviewed_at                is distinct from old.reviewed_at

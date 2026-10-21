@@ -23,6 +23,7 @@ import ModerationScreen from './src/screens/ModerationScreen';
 import ModerationDetailScreen from './src/screens/ModerationDetailScreen';
 import MisCampanasScreen from './src/screens/MisCampanasScreen';
 import CampanaManageScreen from './src/screens/CampanaManageScreen';
+import EditarCampanaScreen from './src/screens/EditarCampanaScreen';
 import ReportsScreen from './src/screens/ReportsScreen';
 import SiguiendoScreen from './src/screens/SiguiendoScreen';
 import PerfilScreen from './src/screens/PerfilScreen';
@@ -40,6 +41,7 @@ export type RootStackParamList = {
   ModerationDetail: { campaign: PendingCampaign };
   MisCampanas: undefined;
   CampanaManage: { campaignId: string };
+  EditarCampana: { campaignId: string };
   Reports: undefined;
   Siguiendo: undefined;
   Perfil: undefined;
@@ -146,6 +148,7 @@ export default function App() {
             <Stack.Screen name="ModerationDetail" component={ModerationDetailScreen} />
             <Stack.Screen name="MisCampanas" component={MisCampanasScreen} />
             <Stack.Screen name="CampanaManage" component={CampanaManageScreen} />
+            <Stack.Screen name="EditarCampana" component={EditarCampanaScreen} />
             <Stack.Screen name="Reports" component={ReportsScreen} />
             <Stack.Screen name="Siguiendo" component={SiguiendoScreen} />
             <Stack.Screen name="Perfil" component={PerfilScreen} />

@@ -43,7 +43,7 @@ Invariantes a respetar siempre:
 - Confirmar un `payment_notification` cambia su `status`, nunca suma al total automáticamente.
 - Toda tabla con RLS habilitado; al agregar tablas, definir políticas en el mismo estilo que las existentes.
 - Las políticas de UPDATE filtran filas, no columnas. Las columnas sensibles las protegen triggers (`guard_campaign_columns`, `guard_profile_role`, `guard_payment_notification`; migraciones 012 y 013): `current_amount` solo cambia desde el trigger de `progress_updates`; estado, revisión y badge de cuenta verificada solo los cambia un moderador; `role` solo lo cambia un admin; de un aviso de pago solo se cambia el `status`. Si agregás columnas sensibles, sumalas ahí.
-- Campos críticos de una campaña (QR, banco, titular, cuenta exclusiva, meta, beneficiario): si el organizador los cambia en una campaña aprobada, vuelve sola a `en_revision`; cambiar la cuenta quita el badge. Título, historia, portada, contacto y fecha límite se editan libres. Una futura pantalla de edición tiene que avisarlo antes de guardar.
+- Campos críticos de una campaña (QR, banco, titular, cuenta exclusiva, meta, beneficiario): si el organizador los cambia en una campaña aprobada, vuelve sola a `en_revision`; cambiar la cuenta quita el badge. Título, historia, portada, contacto y fecha límite se editan libres. `EditarCampanaScreen` avisa antes de guardar (`changesCriticalFields` en `src/lib/campaigns.ts` replica la regla solo para avisar; la que decide es la base). La única transición de estado que puede hacer el organizador es reenviar a revisión una campaña en borrador o rechazada (migración 014).
 - Autoría: avisos de pago, denuncias y mensajes de apoyo solo se crean a nombre del usuario logueado (`sender_id`/`reporter_id`/`author_id = auth.uid()`). El anonimato público es `is_anonymous`/`sender_name`.
 
 ## SQL: historial de migraciones (no negociable)
@@ -80,7 +80,7 @@ src/
                                      # storage, realtime, follows, reports, notifications
   components/                        # ProgressBar, CampaignCard, estados vacío/error/carga
   screens/                           # Feed, CampaignDetail, AvisarPago, CrearCampana, Auth,
-                                     # Onboarding, Perfil, MisCampanas, CampanaManage,
+                                     # Onboarding, Perfil, MisCampanas, CampanaManage, EditarCampana,
                                      # Moderation, ModerationDetail, Reports, Siguiendo
 ```
 
@@ -96,20 +96,22 @@ Convención: pantallas en `src/screens`, piezas reutilizables en `src/components
 
 ## Estado actual
 
-- ✅ Esquema, RLS, triggers y migraciones `001`–`013`.
+- ✅ Esquema, RLS, triggers y migraciones `001`–`014`.
 - ✅ Supabase conectado: feed y detalle con datos reales, Storage, Realtime en la barra.
 - ✅ Auth (login/registro), onboarding y perfil.
 - ✅ Avisar pago (foto de comprobante → `payment_notifications`, no suma al total).
 - ✅ Crear campaña con documentos de verificación (imagen o PDF ≤ 5 MB); nace `en_revision`.
 - ✅ Mis campañas y reporte de avance (`progress_updates`).
+- ✅ Editar campaña: avisa si el cambio la manda a revisión o quita el badge; corregir una rechazada la reenvía.
 - ✅ Moderación: aprobar/rechazar, revisar avisos de pago, marcar cuenta exclusiva como verificada, denuncias.
 - ✅ Seguir campañas + notificaciones push.
 - ✅ Deploy web en Vercel con links compartibles `/c/:slug`.
 
 ## Próximos pasos (ideas, sin orden fijo)
 
-1. Pantalla de editar campaña para el organizador (respetando la regla de campos críticos).
-2. Build de Android/iOS para tiendas.
+1. Build de Android/iOS para tiendas.
+2. Agregar documentos de verificación al editar (hoy solo se adjuntan al crear).
+3. Una campaña que ya llegó a la meta y se re-aprueba queda `aprobada` hasta el próximo avance (debería volver a `completada`).
 
 ## Qué NO hacer
 
