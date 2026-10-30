@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
-import { colors, radius, space } from '../theme';
+import { colors, radius, space, media } from '../theme';
 
 // Tarjeta "fantasma" para el feed mientras cargan las campañas: bloques
 // neutros con la forma de CampaignCard. Sin animación ni librerías.
@@ -27,7 +27,7 @@ const styles = StyleSheet.create({
     marginBottom: space.lg,
     overflow: 'hidden',
   },
-  cover: { width: '100%', height: 160, backgroundColor: colors.track },
+  cover: { width: '100%', aspectRatio: media.coverAspect, backgroundColor: colors.track },
   body: { padding: space.lg, gap: space.sm },
   chip: { width: 80, height: 18, borderRadius: radius.pill, backgroundColor: colors.track },
   lineWide: { width: '85%', height: 16, borderRadius: radius.sm, backgroundColor: colors.track },

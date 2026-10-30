@@ -19,7 +19,7 @@ import { RootStackParamList } from '../../App';
 import { useAuth } from '../lib/auth';
 import { uploadImage, shortId } from '../lib/storage';
 import { getSupabase } from '../lib/supabase';
-import { colors, radius, space, type } from '../theme';
+import { colors, radius, space, type, media } from '../theme';
 
 type AvisarPagoRoute = RouteProp<RootStackParamList, 'AvisarPago'>;
 
@@ -144,7 +144,7 @@ export default function AvisarPagoScreen() {
           <Text style={styles.label}>Foto del comprobante</Text>
           {photoUri ? (
             <View>
-              <Image source={{ uri: photoUri }} style={styles.preview} />
+              <Image source={{ uri: photoUri }} style={styles.preview} resizeMode="contain" />
               <Pressable
                 onPress={pickPhoto}
                 style={({ pressed }) => [styles.replace, pressed && { opacity: 0.9 }]}
@@ -267,7 +267,7 @@ const styles = StyleSheet.create({
   pickerHint: { fontSize: 12, color: colors.textMuted },
   preview: {
     width: '100%',
-    height: 260,
+    aspectRatio: media.photoAspect,
     borderRadius: radius.lg,
     backgroundColor: colors.track,
   },

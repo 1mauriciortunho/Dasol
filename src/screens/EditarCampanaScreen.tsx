@@ -26,7 +26,7 @@ import {
   changesAccount,
   CampaignEdit,
 } from '../lib/campaigns';
-import { colors, radius, space, type, categories, CategoryKey } from '../theme';
+import { colors, radius, space, type, categories, CategoryKey, media } from '../theme';
 
 type Nav = NativeStackNavigationProp<RootStackParamList, 'EditarCampana'>;
 type EditRoute = RouteProp<RootStackParamList, 'EditarCampana'>;
@@ -117,8 +117,12 @@ export default function EditarCampanaScreen() {
   const losesBadge =
     !!campaign && campaign.dedicatedAccountVerified && changesAccount(campaign, edit);
 
-  const pickImage = async (onPick: (uri: string) => void) => {
+  const pickImage = async (onPick: (uri: string) => void, aspect: [number, number]) => {
     const result = await ImagePicker.launchImageLibraryAsync({
+      // El recorte con proporción solo existe en Android (iOS siempre recorta
+      // cuadrado); en el resto, el encuadre lo da el aspectRatio al mostrarla.
+      allowsEditing: Platform.OS === 'android',
+      aspect,
       mediaTypes: ['images'],
       quality: 0.7,
     });
@@ -316,7 +320,7 @@ export default function EditarCampanaScreen() {
           <Text style={styles.label}>Foto de portada</Text>
           <Image source={{ uri: newCoverUri ?? campaign.coverImageUrl }} style={styles.coverPreview} />
           <Pressable
-            onPress={() => pickImage(setNewCoverUri)}
+            onPress={() => pickImage(setNewCoverUri, media.coverPickerAspect)}
             style={({ pressed }) => [styles.replace, pressed && { opacity: 0.9 }]}
           >
             <Ionicons name="image-outline" size={16} color={colors.primary} />
@@ -332,9 +336,9 @@ export default function EditarCampanaScreen() {
 
           <Text style={styles.label}>Foto del QR Simple</Text>
           <View style={styles.qrWrap}>
-            <Image source={{ uri: newQrUri ?? campaign.qrImageUrl }} style={styles.qrPreview} />
+            <Image source={{ uri: newQrUri ?? campaign.qrImageUrl }} style={styles.qrPreview} resizeMode="contain" />
             <Pressable
-              onPress={() => pickImage(setNewQrUri)}
+              onPress={() => pickImage(setNewQrUri, media.qrPickerAspect)}
               style={({ pressed }) => [styles.replace, pressed && { opacity: 0.9 }]}
             >
               <Ionicons name="qr-code-outline" size={16} color={colors.primary} />
@@ -512,7 +516,7 @@ const styles = StyleSheet.create({
   amountInput: { flex: 1, paddingVertical: space.md, fontSize: 16, color: colors.text },
   coverPreview: {
     width: '100%',
-    height: 200,
+    aspectRatio: media.coverAspect,
     borderRadius: radius.lg,
     backgroundColor: colors.track,
   },

@@ -22,7 +22,7 @@ import { RootStackParamList } from '../../App';
 import { useAuth } from '../lib/auth';
 import { uploadImage, getPublicUrl, shortId } from '../lib/storage';
 import { getSupabase } from '../lib/supabase';
-import { colors, radius, space, type, categories, CategoryKey } from '../theme';
+import { colors, radius, space, type, categories, CategoryKey, media } from '../theme';
 
 type Nav = NativeStackNavigationProp<RootStackParamList, 'CrearCampana'>;
 
@@ -93,8 +93,12 @@ export default function CrearCampanaScreen() {
   if (!qrUri) missing.push('foto del QR');
   const isValid = missing.length === 0;
 
-  const pickImage = async (onPick: (uri: string) => void) => {
+  const pickImage = async (onPick: (uri: string) => void, aspect: [number, number]) => {
     const result = await ImagePicker.launchImageLibraryAsync({
+      // El recorte con proporción solo existe en Android (iOS siempre recorta
+      // cuadrado); en el resto, el encuadre lo da el aspectRatio al mostrarla.
+      allowsEditing: Platform.OS === 'android',
+      aspect,
       mediaTypes: ['images'],
       quality: 0.7,
     });
@@ -334,7 +338,7 @@ export default function CrearCampanaScreen() {
             <View>
               <Image source={{ uri: coverUri }} style={styles.coverPreview} />
               <Pressable
-                onPress={() => pickImage(setCoverUri)}
+                onPress={() => pickImage(setCoverUri, media.coverPickerAspect)}
                 style={({ pressed }) => [styles.replace, pressed && { opacity: 0.9 }]}
               >
                 <Ionicons name="image-outline" size={16} color={colors.primary} />
@@ -343,7 +347,7 @@ export default function CrearCampanaScreen() {
             </View>
           ) : (
             <Pressable
-              onPress={() => pickImage(setCoverUri)}
+              onPress={() => pickImage(setCoverUri, media.coverPickerAspect)}
               style={({ pressed }) => [styles.picker, pressed && { opacity: 0.9 }]}
             >
               <Ionicons name="image-outline" size={26} color={colors.primary} />
@@ -361,9 +365,9 @@ export default function CrearCampanaScreen() {
           <Text style={styles.label}>Foto del QR Simple</Text>
           {qrUri ? (
             <View style={styles.qrWrap}>
-              <Image source={{ uri: qrUri }} style={styles.qrPreview} />
+              <Image source={{ uri: qrUri }} style={styles.qrPreview} resizeMode="contain" />
               <Pressable
-                onPress={() => pickImage(setQrUri)}
+                onPress={() => pickImage(setQrUri, media.qrPickerAspect)}
                 style={({ pressed }) => [styles.replace, pressed && { opacity: 0.9 }]}
               >
                 <Ionicons name="image-outline" size={16} color={colors.primary} />
@@ -372,7 +376,7 @@ export default function CrearCampanaScreen() {
             </View>
           ) : (
             <Pressable
-              onPress={() => pickImage(setQrUri)}
+              onPress={() => pickImage(setQrUri, media.qrPickerAspect)}
               style={({ pressed }) => [styles.picker, pressed && { opacity: 0.9 }]}
             >
               <Ionicons name="qr-code-outline" size={26} color={colors.primary} />
@@ -557,7 +561,7 @@ const styles = StyleSheet.create({
   pickerText: { fontSize: 15, fontWeight: '600', color: colors.primary },
   coverPreview: {
     width: '100%',
-    height: 200,
+    aspectRatio: media.coverAspect,
     borderRadius: radius.lg,
     backgroundColor: colors.track,
   },

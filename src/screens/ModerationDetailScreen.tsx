@@ -27,7 +27,7 @@ import {
   setDedicatedAccountVerified,
 } from '../lib/campaigns';
 import { useAuth } from '../lib/auth';
-import { colors, radius, space, type, categories, formatBs } from '../theme';
+import { colors, radius, space, type, categories, formatBs, media } from '../theme';
 
 type Nav = NativeStackNavigationProp<RootStackParamList, 'ModerationDetail'>;
 type DetailRoute = RouteProp<RootStackParamList, 'ModerationDetail'>;
@@ -432,7 +432,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   headerTitle: { ...type.h2, flex: 1 },
-  cover: { width: '100%', height: 200, backgroundColor: colors.track },
+  cover: { width: '100%', aspectRatio: media.coverAspect, backgroundColor: colors.track },
   content: { padding: space.lg },
   cat: { alignSelf: 'flex-start', paddingHorizontal: space.md, paddingVertical: 4, borderRadius: radius.pill },
   catText: { fontSize: 12, fontWeight: '600' },

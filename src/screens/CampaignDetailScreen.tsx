@@ -28,7 +28,7 @@ import { useAuth } from '../lib/auth';
 import { LoadingState } from '../components/LoadingState';
 import { ErrorState } from '../components/ErrorState';
 import { CAMPAIGN_BASE_URL } from '../lib/config';
-import { colors, radius, space, type, categories, formatBs, formatDate } from '../theme';
+import { colors, radius, space, type, categories, formatBs, formatDate, media } from '../theme';
 import { ProgressBar } from '../components/ProgressBar';
 
 type DetailRoute = RouteProp<RootStackParamList, 'CampaignDetail'>;
@@ -310,7 +310,7 @@ export default function CampaignDetailScreen() {
               {completed ? 'La meta se cumplió. Si querés, podés seguir aportando.' : 'Aportá escaneando el QR'}
             </Text>
             <Text style={styles.qrSub}>Pagás directo a la cuenta de la campaña</Text>
-            <Image source={{ uri: campaign.qrImageUrl }} style={styles.qr} />
+            <Image source={{ uri: campaign.qrImageUrl }} style={styles.qr} resizeMode="contain" />
             <View style={styles.bankRow}>
               <Ionicons name="business-outline" size={15} color={colors.textMuted} />
               <Text style={styles.bankText}>{campaign.qrBankName} · {campaign.accountHolderName}</Text>
@@ -339,7 +339,7 @@ export default function CampaignDetailScreen() {
                   <Text style={styles.updateDate}>{formatDate(u.createdAt)}</Text>
                   <Text style={styles.updateText}>{u.updateText}</Text>
                   {!!u.imageUrl && (
-                    <Image source={{ uri: u.imageUrl }} style={styles.updateImage} />
+                    <Image source={{ uri: u.imageUrl }} style={styles.updateImage} resizeMode="contain" />
                   )}
                 </View>
               ))}
@@ -475,7 +475,7 @@ export default function CampaignDetailScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
-  cover: { width: '100%', height: 240, backgroundColor: colors.track },
+  cover: { width: '100%', aspectRatio: media.coverAspect, backgroundColor: colors.track },
   topActions: { position: 'absolute', right: space.lg, flexDirection: 'row', gap: space.sm },
   roundBtn: {
     width: 40,
@@ -617,7 +617,7 @@ const styles = StyleSheet.create({
   updateText: { marginTop: space.xs, fontSize: 14, color: colors.text, lineHeight: 20 },
   updateImage: {
     width: '100%',
-    height: 180,
+    aspectRatio: media.photoAspect,
     borderRadius: radius.md,
     backgroundColor: colors.track,
     marginTop: space.md,

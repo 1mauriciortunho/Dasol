@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, Image, Pressable, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Campaign, isCompleted } from '../types';
-import { colors, radius, space, categories } from '../theme';
+import { colors, radius, space, categories, media } from '../theme';
 import { ProgressBar } from './ProgressBar';
 
 type Props = {
@@ -66,7 +66,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   pressed: { opacity: 0.85 },
-  cover: { width: '100%', height: 160, backgroundColor: colors.track },
+  cover: { width: '100%', aspectRatio: media.coverAspect, backgroundColor: colors.track },
   body: { padding: space.lg },
   chipRow: { flexDirection: 'row', alignItems: 'center', gap: space.sm, marginBottom: space.md },
   cat: { paddingHorizontal: space.md, paddingVertical: 4, borderRadius: radius.pill },

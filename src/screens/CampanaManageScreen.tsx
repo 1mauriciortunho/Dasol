@@ -20,7 +20,7 @@ import { RootStackParamList } from '../../App';
 import { MyCampaign, ProgressUpdate, CampaignStatus } from '../types';
 import { fetchMyCampaigns, fetchProgressUpdates, addProgressUpdate } from '../lib/campaigns';
 import { ProgressBar } from '../components/ProgressBar';
-import { colors, radius, space, type, formatBs, formatDate } from '../theme';
+import { colors, radius, space, type, formatBs, formatDate, media } from '../theme';
 
 type Nav = NativeStackNavigationProp<RootStackParamList, 'CampanaManage'>;
 type ManageRoute = RouteProp<RootStackParamList, 'CampanaManage'>;
@@ -275,7 +275,7 @@ export default function CampanaManageScreen() {
               <Text style={styles.label}>Foto (opcional)</Text>
               {imageUri ? (
                 <View>
-                  <Image source={{ uri: imageUri }} style={styles.preview} />
+                  <Image source={{ uri: imageUri }} style={styles.preview} resizeMode="contain" />
                   <Pressable
                     onPress={pickImage}
                     style={({ pressed }) => [styles.replace, pressed && { opacity: 0.9 }]}
@@ -335,7 +335,7 @@ export default function CampanaManageScreen() {
                   )}
                 </View>
                 {!!u.updateText && <Text style={styles.updateText}>{u.updateText}</Text>}
-                {!!u.imageUrl && <Image source={{ uri: u.imageUrl }} style={styles.updateImage} />}
+                {!!u.imageUrl && <Image source={{ uri: u.imageUrl }} style={styles.updateImage} resizeMode="contain" />}
               </View>
             ))
           )}
@@ -366,7 +366,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: { ...type.h2, flex: 1 },
   content: { paddingHorizontal: space.lg, paddingTop: space.md },
-  cover: { width: '100%', height: 160, borderRadius: radius.lg, backgroundColor: colors.track },
+  cover: { width: '100%', aspectRatio: media.coverAspect, borderRadius: radius.lg, backgroundColor: colors.track },
   badge: {
     alignSelf: 'flex-start',
     paddingHorizontal: space.md,
@@ -460,7 +460,7 @@ const styles = StyleSheet.create({
     borderStyle: 'dashed',
   },
   pickerText: { fontSize: 15, fontWeight: '600', color: colors.primary },
-  preview: { width: '100%', height: 180, borderRadius: radius.md, backgroundColor: colors.track },
+  preview: { width: '100%', aspectRatio: media.photoAspect, borderRadius: radius.md, backgroundColor: colors.track },
   replace: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -490,7 +490,7 @@ const styles = StyleSheet.create({
   updateText: { marginTop: space.xs, fontSize: 14, color: colors.text, lineHeight: 20 },
   updateImage: {
     width: '100%',
-    height: 180,
+    aspectRatio: media.photoAspect,
     borderRadius: radius.md,
     backgroundColor: colors.track,
     marginTop: space.md,

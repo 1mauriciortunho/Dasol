@@ -18,7 +18,7 @@ import { useAuth } from '../lib/auth';
 import { LoadingState } from '../components/LoadingState';
 import { ErrorState } from '../components/ErrorState';
 import { EmptyState } from '../components/EmptyState';
-import { colors, radius, space, type, categories, formatBs } from '../theme';
+import { colors, radius, space, type, categories, formatBs, media } from '../theme';
 
 type Nav = NativeStackNavigationProp<RootStackParamList, 'Moderation'>;
 
@@ -179,7 +179,7 @@ const styles = StyleSheet.create({
     marginBottom: space.lg,
     overflow: 'hidden',
   },
-  cover: { width: '100%', height: 140, backgroundColor: colors.track },
+  cover: { width: '100%', aspectRatio: media.coverAspect, backgroundColor: colors.track },
   body: { padding: space.lg, gap: space.xs },
   cat: { alignSelf: 'flex-start', paddingHorizontal: space.md, paddingVertical: 4, borderRadius: radius.pill },
   catText: { fontSize: 12, fontWeight: '600' },

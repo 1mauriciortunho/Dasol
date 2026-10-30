@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, ActivityIndicator, Platform } from 'react-native';
+import { View, ActivityIndicator, Platform, StyleSheet } from 'react-native';
 import {
   NavigationContainer,
   createNavigationContainerRef,
@@ -29,7 +29,7 @@ import SiguiendoScreen from './src/screens/SiguiendoScreen';
 import PerfilScreen from './src/screens/PerfilScreen';
 import OnboardingScreen from './src/screens/OnboardingScreen';
 import { PendingCampaign } from './src/types';
-import { colors } from './src/theme';
+import { colors, layout } from './src/theme';
 
 export type RootStackParamList = {
   Feed: undefined;
@@ -136,25 +136,40 @@ export default function App() {
     <SafeAreaProvider>
       <StatusBar style="dark" />
       <AuthProvider>
-        <NavigationContainer ref={navigationRef} linking={linking}>
-          <Stack.Navigator initialRouteName={initialRoute} screenOptions={{ headerShown: false }}>
-            <Stack.Screen name="Onboarding" component={OnboardingScreen} />
-            <Stack.Screen name="Feed" component={FeedScreen} />
-            <Stack.Screen name="CampaignDetail" component={CampaignDetailScreen} />
-            <Stack.Screen name="AvisarPago" component={AvisarPagoScreen} />
-            <Stack.Screen name="CrearCampana" component={CrearCampanaScreen} />
-            <Stack.Screen name="Auth" component={AuthScreen} />
-            <Stack.Screen name="Moderation" component={ModerationScreen} />
-            <Stack.Screen name="ModerationDetail" component={ModerationDetailScreen} />
-            <Stack.Screen name="MisCampanas" component={MisCampanasScreen} />
-            <Stack.Screen name="CampanaManage" component={CampanaManageScreen} />
-            <Stack.Screen name="EditarCampana" component={EditarCampanaScreen} />
-            <Stack.Screen name="Reports" component={ReportsScreen} />
-            <Stack.Screen name="Siguiendo" component={SiguiendoScreen} />
-            <Stack.Screen name="Perfil" component={PerfilScreen} />
-          </Stack.Navigator>
-        </NavigationContainer>
+        <View style={styles.webFrame}>
+          <View style={styles.webContent}>
+            <NavigationContainer ref={navigationRef} linking={linking}>
+              <Stack.Navigator initialRouteName={initialRoute} screenOptions={{ headerShown: false }}>
+                <Stack.Screen name="Onboarding" component={OnboardingScreen} />
+                <Stack.Screen name="Feed" component={FeedScreen} />
+                <Stack.Screen name="CampaignDetail" component={CampaignDetailScreen} />
+                <Stack.Screen name="AvisarPago" component={AvisarPagoScreen} />
+                <Stack.Screen name="CrearCampana" component={CrearCampanaScreen} />
+                <Stack.Screen name="Auth" component={AuthScreen} />
+                <Stack.Screen name="Moderation" component={ModerationScreen} />
+                <Stack.Screen name="ModerationDetail" component={ModerationDetailScreen} />
+                <Stack.Screen name="MisCampanas" component={MisCampanasScreen} />
+                <Stack.Screen name="CampanaManage" component={CampanaManageScreen} />
+                <Stack.Screen name="EditarCampana" component={EditarCampanaScreen} />
+                <Stack.Screen name="Reports" component={ReportsScreen} />
+                <Stack.Screen name="Siguiendo" component={SiguiendoScreen} />
+                <Stack.Screen name="Perfil" component={PerfilScreen} />
+              </Stack.Navigator>
+            </NavigationContainer>
+          </View>
+        </View>
       </AuthProvider>
     </SafeAreaProvider>
   );
 }
+
+// En web, en pantallas anchas, la app se muestra centrada con un ancho máximo
+// (como en el celular) en vez de estirarse a todo el ancho del navegador.
+const styles = StyleSheet.create({
+  webFrame: { flex: 1, backgroundColor: colors.bg, alignItems: 'center' },
+  webContent: {
+    flex: 1,
+    width: '100%',
+    maxWidth: Platform.OS === 'web' ? layout.maxContentWidth : undefined,
+  },
+});

@@ -24,6 +24,20 @@ export const space = { xs: 4, sm: 8, md: 12, lg: 16, xl: 20, xxl: 28, xxxl: 40 }
 
 export const radius = { sm: 8, md: 12, lg: 20, pill: 999 };
 
+// Proporciones de imagen. Las portadas usan siempre 16:9 (en tarjetas, detalle,
+// moderación y formularios) para que se vean con el mismo encuadre en
+// cualquier ancho de pantalla; las fotos de avances y comprobantes, 4:3.
+// pickerAspect = recorte que se ofrece al elegir la foto en el celular.
+export const media = {
+  coverAspect: 16 / 9,
+  photoAspect: 4 / 3,
+  coverPickerAspect: [16, 9] as [number, number],
+  qrPickerAspect: [1, 1] as [number, number],
+};
+
+// En web (pantallas anchas) el contenido se centra con este ancho máximo.
+export const layout = { maxContentWidth: 640 };
+
 export const type = {
   display: { fontSize: 28, fontWeight: '700' as const, color: colors.text },
   h1: { fontSize: 22, fontWeight: '700' as const, color: colors.text },
